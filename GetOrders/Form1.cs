@@ -15,6 +15,7 @@ namespace GetOrders
         bool isScheduleMode = false;
         System.Timers.Timer time;
         bool isAutoMode = false;
+        List<FileThread> threadsList = new List<FileThread>();
 
         public Form1()
         {
@@ -30,7 +31,17 @@ namespace GetOrders
             checkBox5.Checked = false;
             checkBox6.Checked = false;
             checkBox7.Checked = false;
+            checkBox8.Checked = false;
+            checkBox9.Checked = false;
+            checkBox10.Checked = false;
         }
+
+        private void addThread(TextBox _textBox, string _name, string _ip, String _path, bool _isGettingFile, string _mask, string _remoteLocation, string _localLocation)
+        {
+            threadsList.Add(new FileThread(_textBox, _name, _ip, _path, _isGettingFile, _mask, _remoteLocation, _localLocation));
+        }
+
+        private bool checkIfThreadFinishedAndRestartOnFail
 
         private void OnTimedEvent(Object source, System.Timers.ElapsedEventArgs e)
         {
@@ -140,6 +151,21 @@ namespace GetOrders
                     checkBox7.Checked = true;
                 }
 
+                if (textBox8.BackColor == System.Drawing.Color.FromArgb(253, 100, 120))
+                {
+                    checkBox7.Checked = true;
+                }
+
+                if (textBox9.BackColor == System.Drawing.Color.FromArgb(253, 100, 120))
+                {
+                    checkBox7.Checked = true;
+                }
+
+                if (textBox10.BackColor == System.Drawing.Color.FromArgb(253, 100, 120))
+                {
+                    checkBox7.Checked = true;
+                }
+
                 StartCopyingFiles();
             }
         }
@@ -183,6 +209,7 @@ namespace GetOrders
                     checkBox7.Checked = false;
                     checkBox8.Checked = false;
                     checkBox9.Checked = false;
+                    checkBox10.Checked = false;
                 }
 
                 if (arg == "-so")
@@ -211,6 +238,9 @@ namespace GetOrders
 
                 if (arg == "-pe")
                     checkBox9.Checked = true;
+
+                if (arg == "-pr")
+                    checkBox10.Checked = true;
 
                 if (arg == "-send")
                 {
@@ -287,8 +317,9 @@ namespace GetOrders
 
         void StartCopyingFiles()
         {
+            FileThread ft;
             if (checkBox1.Checked)
-                new FileThread(textBox1, "Союз", "10.7.21.50", path_textBox.Text, radioButton1.Checked, textBox8.Text, textBox9.Text, path_textBox.Text);
+                ft = new FileThread(textBox1, "Союз", "10.7.21.50", path_textBox.Text, radioButton1.Checked, textBox8.Text, textBox9.Text, path_textBox.Text);
             if (checkBox2.Checked)
                 new FileThread(textBox2, "Игарка", "10.7.22.50", path_textBox.Text, radioButton1.Checked, textBox8.Text, textBox9.Text, path_textBox.Text);
             if (checkBox3.Checked)
@@ -305,6 +336,8 @@ namespace GetOrders
                 new FileThread(textBox10, "Белый орел", "10.7.28.50", path_textBox.Text, radioButton1.Checked, textBox8.Text, textBox9.Text, path_textBox.Text);
             if (checkBox9.Checked)
                 new FileThread(textBox11, "Перекресток", "10.7.30.50", path_textBox.Text, radioButton1.Checked, textBox8.Text, textBox9.Text, path_textBox.Text);
+            if (checkBox10.Checked)
+                new FileThread(textBox12, "Промышленный", "10.7.29.50", path_textBox.Text, radioButton1.Checked, textBox8.Text, textBox9.Text, path_textBox.Text);
         }
 
         private void radioButton1_CheckedChanged(object sender, EventArgs e)

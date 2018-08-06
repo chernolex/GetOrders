@@ -6,6 +6,7 @@ using System.Threading;
 using System.Windows.Forms;
 using System.Net.NetworkInformation;
 using System.IO;
+using System.Drawing;
 
 namespace GetOrders
 {
@@ -20,6 +21,89 @@ namespace GetOrders
         string mask;
         string soucreDir;
         string finalDir;
+        bool needsToStop = false;
+        threadStatuses status;
+
+        //TODO: Split statuses into error statuses, success statuses and pending statuses
+        //Possibly:
+        //enum statusTypes
+        //{
+        //    success,
+        //    pending,
+        //    error
+        //}
+        enum threadStatuses
+        {
+            success,
+            stopping,
+            stopped,
+            connecting,
+            no_connection,
+            trying_to_copy,
+            copying_file,
+            getting_files_list,
+            no_file,
+            file_copied,
+            error,
+            none
+        }
+
+        enum errorStatuses
+        {
+            threadstatuses.success
+        }
+        
+        private string getMessageByStatusWithAdditionalInfo(threadStatuses status, string additionalInfo)
+        {
+            if (status == threadStatuses.success)
+                return "Файл(ы) скопированы";
+            if (status == threadStatuses.stopping)
+                return "Остановка операции";
+            if (status == threadStatuses.stopped)
+                return "Операция остановлена";
+            if (status == threadStatuses.connecting)
+                return "Попытка соединения №" + additionalInfo;
+            if (status == threadStatuses.no_connection)
+                return "Не удалось подключиться";
+            if (status == threadStatuses.trying_to_copy)
+                return "Попытка скопировать файлы";
+            if (status == threadStatuses.copying_file)
+                return "Копируется файл " + additionalInfo;
+            if (status == threadStatuses.getting_files_list)
+                return "Получение списка файлов";
+            if (status == threadStatuses.no_file)
+                return "Файлы не найдены";
+            if (status == threadStatuses.file_copied)
+                return "Файлы скопированы";
+            if (status == threadStatuses.error)
+                return "Ошибка при копировании";
+            if (status == threadStatuses.none)
+                return "";
+
+            return "Неизвестный статус";
+        }
+
+        private string getMessageByStatus(threadStatuses status)
+        {
+            return getMessageByStatusWithAdditionalInfo(status, "");
+        }
+
+        private Color getColorByStatus(threadStatuses status)
+        {
+            if (status == threadStatuses.success)
+                return Color.YellowGreen;
+
+            if (status == threadStatuses.stopped ||
+                status == threadStatuses.no_connection ||
+                status == threadStatuses.no_file ||
+                status == threadStatuses.error)
+                return Color.FromArgb(253, 100, 120);
+
+            if (status == threadStatuses.stopping)
+                return Color.Orange;
+
+            return Color.FromArgb(240, 240, 240);
+        }
 
         public FileThread(TextBox _textbox, string _shopName, string _stringIP, string _path, bool _ifGettingFile, string _mask, string _sourceDir, string _finalDir)
         {
@@ -46,27 +130,56 @@ namespace GetOrders
             thread.Start();
         }
 
-        void SetText(string text, bool isTextRed)
+        public void SetThreadToStop()
         {
-            if (textBox.InvokeRequired) textBox.Invoke(new Action<string>((s) => textBox.Text = s), text);
-            else textBox.Text = text;
-
-            System.Drawing.Color color;
-
-            if (isTextRed)
-                color = System.Drawing.Color.FromArgb(253, 100, 120);
-            else
-                color = System.Drawing.Color.YellowGreen;
-
-            if (textBox.InvokeRequired) textBox.Invoke(new Action<System.Drawing.Color>((col) => textBox.BackColor = col), color);
-            else textBox.BackColor = color;
-            
+            updateStatus(threadStatuses.stopping);
         }
+
+        private void Stop()
+        {
+            //SetText("Получена команда \"Прервать\"", true);
+            updateStatus(threadStatuses.stopped);
+        }
+
+        //void SetText(string text, bool isTextRed)
+        //{
+        //    if (textBox.InvokeRequired) textBox.Invoke(new Action<string>((s) => textBox.Text = s), text);
+        //    else textBox.Text = text;
+
+        //    System.Drawing.Color color;
+
+        //    if (isTextRed)
+        //        color = System.Drawing.Color.FromArgb(253, 100, 120);
+        //    else
+        //        color = System.Drawing.Color.YellowGreen;
+
+        //    if (textBox.InvokeRequired) textBox.Invoke(new Action<System.Drawing.Color>((col) => textBox.BackColor = col), color);
+        //    else textBox.BackColor = color;
+            
+        //}
 
         void SetText(string text)
         {
             if (textBox.InvokeRequired) textBox.Invoke(new Action<string>((s) => textBox.Text = s), text);
             else textBox.Text = text;
+        }
+
+        void updateStatus(threadStatuses new_status)
+        {
+            status = new_status;
+            string text = getMessageByStatus(status);
+            Color color = getColorByStatus(status);
+            if (textBox.InvokeRequired)
+                textBox.Invoke(new Action<string, Color>((_text, _color) =>
+                {
+                    textBox.Text = text;
+                    textBox.BackColor = color;
+                }), text, color);
+            else
+            {
+                textBox.Text = text;
+                textBox.BackColor = color;
+            }
         }
 
         void CopyFile()
@@ -81,6 +194,12 @@ namespace GetOrders
                 SetText("Попытка подключиться к магазину");
                 while (!isPingSuccessful)
                 {
+                    if (needsToStop)
+                    {
+                        Stop();
+                        return;
+                    }
+
                     if (count < 6)
                     {
                         count++;
@@ -154,6 +273,12 @@ namespace GetOrders
 
                     for (int i = 0; i < fi.Length; i++)
                     {
+                        if (needsToStop)
+                        {
+                            Stop();
+                            return;
+                        }
+
                         SetText("Копирую файл " + (i + 1) + " из " + fi.Length);
                         if (ifGettingFile)
                         {

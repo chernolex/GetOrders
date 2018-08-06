@@ -18,3 +18,9 @@ I:\Users\debug\Documents\Visual Studio 2010\Projects\GetOrders\GetOrders\obj\x86
 C:\Projects\Status\GetOrders\GetOrders\bin\Debug\GetOrders.exe.config
 C:\Projects\Status\GetOrders\GetOrders\obj\x86\Debug\GetOrders.exe
 C:\Projects\Status\GetOrders\GetOrders\obj\x86\Debug\GetOrders.pdb
+C:\Projects\Status\GetOrders\GetOrders\bin\Debug\GetOrders.exe
+C:\Projects\Status\GetOrders\GetOrders\obj\x86\Debug\GetOrders.csprojResolveAssemblyReference.cache
+C:\Projects\Status\GetOrders\GetOrders\obj\x86\Debug\GetOrders.Form1.resources
+C:\Projects\Status\GetOrders\GetOrders\obj\x86\Debug\GetOrders.Properties.Resources.resources
+C:\Projects\Status\GetOrders\GetOrders\obj\x86\Debug\GetOrders.csproj.GenerateResource.Cache
+C:\Projects\Status\GetOrders\GetOrders\bin\Debug\GetOrders.pdb
