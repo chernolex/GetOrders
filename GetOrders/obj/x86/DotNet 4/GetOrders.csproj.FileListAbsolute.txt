@@ -1,8 +1,0 @@
-C:\Projects\Status\GetOrders\GetOrders\bin\x86\DotNet 4\GetOrders.exe.config
-C:\Projects\Status\GetOrders\GetOrders\bin\x86\DotNet 4\GetOrders.exe
-C:\Projects\Status\GetOrders\GetOrders\bin\x86\DotNet 4\GetOrders.pdb
-C:\Projects\Status\GetOrders\GetOrders\obj\x86\DotNet 4\GetOrders.Form1.resources
-C:\Projects\Status\GetOrders\GetOrders\obj\x86\DotNet 4\GetOrders.Properties.Resources.resources
-C:\Projects\Status\GetOrders\GetOrders\obj\x86\DotNet 4\GetOrders.csproj.GenerateResource.Cache
-C:\Projects\Status\GetOrders\GetOrders\obj\x86\DotNet 4\GetOrders.exe
-C:\Projects\Status\GetOrders\GetOrders\obj\x86\DotNet 4\GetOrders.pdb
