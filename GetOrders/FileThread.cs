@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 using System.Net.NetworkInformation;
@@ -12,133 +9,58 @@ namespace GetOrders
 {
     class FileThread
     {
-        Thread thread;
-        TextBox textBox;
-        string shopName;
-        string stringIP;
-        string path;
-        bool ifGettingFile;
-        string mask;
-        string soucreDir;
-        string finalDir;
-        bool needsToStop = false;
-        threadStatuses status;
+        private readonly string _shopName;
+        private readonly string _stringIP;
+        private readonly string _mask;
+        private readonly string _soucreDir;
+        private readonly string _finalDir;
+        private readonly bool _ifGettingFile;
+        private readonly TextBox _textBox;
+        public ThreadStatus Status { get; set; }
 
-        //TODO: Split statuses into error statuses, success statuses and pending statuses
-        //Possibly:
-        //enum statusTypes
-        //{
-        //    success,
-        //    pending,
-        //    error
-        //}
-        enum threadStatuses
+        private string GetMessageByStatus(ThreadStatus status, string additionalInfo)
         {
-            success,
-            stopping,
-            stopped,
-            connecting,
-            no_connection,
-            trying_to_copy,
-            copying_file,
-            getting_files_list,
-            no_file,
-            file_copied,
-            error,
-            none
+            return ThreadStatuses.GetMessageByStatus(status, additionalInfo);
         }
 
-        enum errorStatuses
+        public FileThread(TextBox textbox, string shopName, string stringIP, bool ifGettingFile, string mask, 
+            string sourceDir, string finalDir)
         {
-            threadstatuses.success
-        }
-        
-        private string getMessageByStatusWithAdditionalInfo(threadStatuses status, string additionalInfo)
-        {
-            if (status == threadStatuses.success)
-                return "Файл(ы) скопированы";
-            if (status == threadStatuses.stopping)
-                return "Остановка операции";
-            if (status == threadStatuses.stopped)
-                return "Операция остановлена";
-            if (status == threadStatuses.connecting)
-                return "Попытка соединения №" + additionalInfo;
-            if (status == threadStatuses.no_connection)
-                return "Не удалось подключиться";
-            if (status == threadStatuses.trying_to_copy)
-                return "Попытка скопировать файлы";
-            if (status == threadStatuses.copying_file)
-                return "Копируется файл " + additionalInfo;
-            if (status == threadStatuses.getting_files_list)
-                return "Получение списка файлов";
-            if (status == threadStatuses.no_file)
-                return "Файлы не найдены";
-            if (status == threadStatuses.file_copied)
-                return "Файлы скопированы";
-            if (status == threadStatuses.error)
-                return "Ошибка при копировании";
-            if (status == threadStatuses.none)
-                return "";
-
-            return "Неизвестный статус";
-        }
-
-        private string getMessageByStatus(threadStatuses status)
-        {
-            return getMessageByStatusWithAdditionalInfo(status, "");
-        }
-
-        private Color getColorByStatus(threadStatuses status)
-        {
-            if (status == threadStatuses.success)
-                return Color.YellowGreen;
-
-            if (status == threadStatuses.stopped ||
-                status == threadStatuses.no_connection ||
-                status == threadStatuses.no_file ||
-                status == threadStatuses.error)
-                return Color.FromArgb(253, 100, 120);
-
-            if (status == threadStatuses.stopping)
-                return Color.Orange;
-
-            return Color.FromArgb(240, 240, 240);
-        }
-
-        public FileThread(TextBox _textbox, string _shopName, string _stringIP, string _path, bool _ifGettingFile, string _mask, string _sourceDir, string _finalDir)
-        {
-            textBox = _textbox;
-            stringIP = _stringIP;
-            shopName = _shopName;
-            path = _path;
-            ifGettingFile = _ifGettingFile;
-            mask = _mask;
+            Status = ThreadStatus.None;
+            _textBox = textbox;
+            _stringIP = stringIP;
+            _shopName = shopName;
+            _ifGettingFile = ifGettingFile;
+            _mask = mask;
             if (ifGettingFile)
             {
-                soucreDir = _sourceDir;
-                finalDir = _finalDir;
+                _soucreDir = sourceDir;
+                _finalDir = finalDir;
             }
             else
             {
-                soucreDir = _finalDir;
-                finalDir = _sourceDir;
+                _soucreDir = finalDir;
+                _finalDir = sourceDir;
             }
-            
 
-            thread = new Thread(CopyFile);
-            thread.Name = shopName;
+            StartThread();
+        }
+
+        public void StartThread()
+        {
+            var thread = new Thread(CopyFile) { Name = _shopName };
             thread.Start();
         }
 
         public void SetThreadToStop()
         {
-            updateStatus(threadStatuses.stopping);
+            UpdateStatus(ThreadStatus.Stopping);
         }
 
         private void Stop()
         {
             //SetText("Получена команда \"Прервать\"", true);
-            updateStatus(threadStatuses.stopped);
+            UpdateStatus(ThreadStatus.Stopped);
         }
 
         //void SetText(string text, bool isTextRed)
@@ -158,43 +80,41 @@ namespace GetOrders
             
         //}
 
-        void SetText(string text)
+        private void UpdateStatus(ThreadStatus newStatus)
         {
-            if (textBox.InvokeRequired) textBox.Invoke(new Action<string>((s) => textBox.Text = s), text);
-            else textBox.Text = text;
+            UpdateStatusWithAdditionalInfo(newStatus, "");
         }
-
-        void updateStatus(threadStatuses new_status)
+        private void UpdateStatusWithAdditionalInfo(ThreadStatus newStatus, string additionalInfo)
         {
-            status = new_status;
-            string text = getMessageByStatus(status);
-            Color color = getColorByStatus(status);
-            if (textBox.InvokeRequired)
-                textBox.Invoke(new Action<string, Color>((_text, _color) =>
+            Status = newStatus;
+            string newText = GetMessageByStatus(Status, additionalInfo);
+            Color newColor = ThreadStatuses.GetColorByStatus(Status);
+            if (_textBox.InvokeRequired)
+                _textBox.Invoke(new Action<string, Color>((text, color) =>
                 {
-                    textBox.Text = text;
-                    textBox.BackColor = color;
-                }), text, color);
+                    _textBox.Text = text;
+                    _textBox.BackColor = color;
+                }), newText, newColor);
             else
             {
-                textBox.Text = text;
-                textBox.BackColor = color;
+                _textBox.Text = newText;
+                _textBox.BackColor = newColor;
             }
         }
 
-        void CopyFile()
+        private void CopyFile()
         {
-            if (textBox.InvokeRequired) textBox.Invoke(new Action<System.Drawing.Color>((col) => textBox.BackColor = col), System.Drawing.Color.FromArgb(240, 240, 240));
-            else textBox.BackColor = System.Drawing.Color.FromArgb(240, 240, 240);
+            if (_textBox.InvokeRequired) _textBox.Invoke(new Action<Color>((col) => _textBox.BackColor = col), Color.FromArgb(240, 240, 240));
+            else _textBox.BackColor = Color.FromArgb(240, 240, 240);
             bool isPingSuccessful = false;
 
             try
             {
                 int count = 0;
-                SetText("Попытка подключиться к магазину");
+                UpdateStatus(ThreadStatus.Connecting);
                 while (!isPingSuccessful)
                 {
-                    if (needsToStop)
+                    if (Status == ThreadStatus.Stopping)
                     {
                         Stop();
                         return;
@@ -203,85 +123,54 @@ namespace GetOrders
                     if (count < 6)
                     {
                         count++;
-                        SetText("Попытка подключения №" + count);
+                        UpdateStatusWithAdditionalInfo(ThreadStatus.Connecting, count.ToString());
                         Ping ping = new Ping();
-                        PingReply pr;
 
-                        pr = ping.Send(stringIP);
-                        if (pr.Status == IPStatus.Success)
+                        var pr = ping.Send(_stringIP);
+                        if (pr != null && pr.Status == IPStatus.Success)
                             isPingSuccessful = true;
                     }
                     else
                     {
-                        SetText("Не удается подключиться к магазину", true);
+                        UpdateStatus(ThreadStatus.NoConnection);
                         break;
                     }
                 }
 
                 if (isPingSuccessful)
                 {
-                    if (ifGettingFile)
-                    {
-                        SetText("Магазин в сети, попытка скопировать заявку");
-                    }
-                    else
-                    {
-                        SetText("Магазин в сети, попытка отправить файл");
-                    }
+                    UpdateStatus(ThreadStatus.TryingToCopy);
                     Thread.Sleep(1000);
-                    DirectoryInfo sourceDirectory;
-                    if (ifGettingFile)
-                    {
-                        sourceDirectory = new DirectoryInfo("\\\\" + stringIP + "\\" + soucreDir);
-                    }
-                    else
-                    {
-                        sourceDirectory = new DirectoryInfo(soucreDir);
-                    }
+                    var sourceDirectory = _ifGettingFile ? new DirectoryInfo($@"\\{_stringIP}\{_soucreDir}") : new DirectoryInfo(_soucreDir);
                     Thread.Sleep(2000);
-                    SetText("Получение списка файлов");
+                    UpdateStatus(ThreadStatus.GettingFilesList);
                     sourceDirectory.Refresh();
-                    FileInfo[] fi = sourceDirectory.GetFiles(mask);
-                    
-                    string pathSave = "";
-                    if (ifGettingFile)
-                    {
-                        pathSave = finalDir + "\\" + shopName;
-                    }
-                    else
-                    {
-                        pathSave = "\\\\" + stringIP + "\\" + finalDir;
-                    }
+                    FileInfo[] fi = sourceDirectory.GetFiles(_mask);
+
+                    var pathSave = _ifGettingFile ? $@"{_finalDir}\{_shopName}" : $@"\\{_stringIP}\{_finalDir}";
                     DirectoryInfo dits = new DirectoryInfo(pathSave);
                     if (!dits.Exists)
                         dits.Create();
 
                     if (fi.Length == 0)
                     {
-                        if (ifGettingFile)
-                        {
-                            SetText("Файл для получения не найден", true);
-                            return;
-                        }
-                        else
-                        {
-                            SetText("Файл для копирования не найден", true);
-                            return;
-                        }
+                        UpdateStatus(ThreadStatus.NoFile);
+                        return;
                     }
 
 
                     for (int i = 0; i < fi.Length; i++)
                     {
-                        if (needsToStop)
+                        if (Status == ThreadStatus.Stopping)
                         {
                             Stop();
                             return;
                         }
 
-                        SetText("Копирую файл " + (i + 1) + " из " + fi.Length);
-                        if (ifGettingFile)
+                        UpdateStatusWithAdditionalInfo(ThreadStatus.CopyingFile, $"{(i + 1)} из {fi.Length}");
+                        if (_ifGettingFile)
                         {
+                            // ReSharper disable once SpecifyACultureInStringConversionExplicitly
                             string date = DateTime.Now.ToString();
                             date = date.Replace(":", "-");
 
@@ -294,23 +183,14 @@ namespace GetOrders
                             fi[i].CopyTo(pathSave + "\\" + fi[i].Name, true);
                         }
                     }
-
-                    if (ifGettingFile)
-                    {
-                        SetText("Файл(ы) получен(ы)", false);
-                    }
-                    else
-                    {
-                        SetText("Файл(ы) отправлен(ы)", false);
-                    }
+                    UpdateStatus(ThreadStatus.FileCopied);
                 }
                 
             }
-            catch (System.Exception ex)
+            catch (Exception)
             {
-                SetText("Не получилось скопировать файл(ы)", true);
+                UpdateStatus(ThreadStatus.Error);
             }
-            return;
         }
     }
 }
