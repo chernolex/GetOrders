@@ -1,10 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
 using System.Windows.Forms;
 using System.IO;
 
@@ -12,16 +7,19 @@ namespace GetOrders
 {
     public partial class Form1 : Form
     {
-        bool isScheduleMode = false;
-        System.Timers.Timer time;
-        bool isAutoMode = false;
+        private bool _isScheduleMode;
+        private System.Timers.Timer _time;
+        private bool _isAutoMode;
+        private readonly Dictionary<string, FileThread> _threadsMap = new Dictionary<string, FileThread>();
 
         public Form1()
         {
             InitializeComponent();
         }
 
-        void RemoveAllChecks()
+        // ReSharper disable once UnusedMember.Local
+        // Probably will be used in future.
+        private void RemoveAllChecks()
         {
             checkBox1.Checked = false;
             checkBox2.Checked = false;
@@ -30,117 +28,55 @@ namespace GetOrders
             checkBox5.Checked = false;
             checkBox6.Checked = false;
             checkBox7.Checked = false;
+            checkBox8.Checked = false;
+            checkBox9.Checked = false;
+            checkBox10.Checked = false;
+        }
+
+        private void StartThread(TextBox textBox, string name, string ip, bool isGettingFile, string mask,
+            string remoteLocation, string localLocation)
+        {
+            if (_threadsMap.ContainsKey(name))
+                _threadsMap[name].StartThread();
+            else
+                AddThread(textBox, name, ip, isGettingFile, mask, remoteLocation, localLocation);
+        }
+
+        private void AddThread(TextBox textBox, string name, string ip, bool isGettingFile, string mask, string remoteLocation, string localLocation)
+        {
+            _threadsMap.Add(name, new FileThread(textBox, name, ip, isGettingFile, mask, remoteLocation, localLocation));
         }
 
         private void OnTimedEvent(Object source, System.Timers.ElapsedEventArgs e)
         {
-            if (isScheduleMode)
+            if (_isScheduleMode)
             {
                 bool allDownloaded = true;
-                if (textBox1.BackColor == System.Drawing.Color.FromArgb(253, 100, 120))
-                {
-                    new FileThread(textBox1, "Союз", "10.7.21.50", path_textBox.Text, true, ".xls", "рабочий стол", path_textBox.Text);
-                    allDownloaded = false;
-                }
-                if (textBox1.BackColor == System.Drawing.Color.FromArgb(240, 240, 240))
-                    allDownloaded = false;
 
-                if (textBox2.BackColor == System.Drawing.Color.FromArgb(253, 100, 120))
+                foreach (var thread in _threadsMap)
                 {
-                    new FileThread(textBox2, "Игарка", "10.7.22.50", path_textBox.Text, true, ".xls", "рабочий стол", path_textBox.Text);
-                    allDownloaded = false;
+                    if (ThreadStatuses.GetThreadStatusTypeByStatus(thread.Value.Status) == ThreadStatusType.Failed)
+                    {
+                        thread.Value.StartThread();
+                        allDownloaded = false;
+                    }
                 }
-                if (textBox2.BackColor == System.Drawing.Color.FromArgb(240, 240, 240))
-                    allDownloaded = false;
-
-                if (textBox3.BackColor == System.Drawing.Color.FromArgb(253, 100, 120))
-                {
-                    new FileThread(textBox3, "Риал", "10.7.23.50", path_textBox.Text, true, ".xls", "рабочий стол", path_textBox.Text);
-                    allDownloaded = false;
-                }
-                if (textBox3.BackColor == System.Drawing.Color.FromArgb(240, 240, 240))
-                    allDownloaded = false;
-
-                if (textBox4.BackColor == System.Drawing.Color.FromArgb(253, 100, 120))
-                {
-                    new FileThread(textBox4, "Стиль", "10.7.24.50", path_textBox.Text, true, ".xls", "рабочий стол", path_textBox.Text);
-                    allDownloaded = false;
-                }
-                if (textBox4.BackColor == System.Drawing.Color.FromArgb(240, 240, 240))
-                    allDownloaded = false;
-
-                if (textBox5.BackColor == System.Drawing.Color.FromArgb(253, 100, 120))
-                {
-                    new FileThread(textBox5, "Зимушка", "10.7.25.50", path_textBox.Text, true, ".xls", "рабочий стол", path_textBox.Text);
-                    allDownloaded = false;
-                }
-                if (textBox5.BackColor == System.Drawing.Color.FromArgb(240, 240, 240))
-                    allDownloaded = false;
-
-                if (textBox6.BackColor == System.Drawing.Color.FromArgb(253, 100, 120))
-                {
-                    new FileThread(textBox6, "Ассорти", "10.7.26.50", path_textBox.Text, true, ".xls", "рабочий стол", path_textBox.Text);
-                    allDownloaded = false;
-                }
-                if (textBox6.BackColor == System.Drawing.Color.FromArgb(240, 240, 240))
-                    allDownloaded = false;
-
-                if (textBox7.BackColor == System.Drawing.Color.FromArgb(253, 100, 120))
-                {
-                    new FileThread(textBox7, "Кедр", "10.7.27.50", path_textBox.Text, true, ".xls", "рабочий стол", path_textBox.Text);
-                    allDownloaded = false;
-                }
-                if (textBox7.BackColor == System.Drawing.Color.FromArgb(240, 240, 240))
-                    allDownloaded = false;
 
                 if (allDownloaded)
                 {
-                    time.Enabled = false;
-                    MessageBox.Show("Заявки скопированы");
-                    MessageBox.Show("Все заявки скопированы. Дата/Время:" + DateTime.Now.ToString());
+                    _time.Enabled = false;
+                    MessageBox.Show(@"Заявки скопированы");
+                    MessageBox.Show(@"Все заявки скопированы. Дата/Время:" + DateTime.Now);
                 }
             }
 
-            if (isAutoMode)
+            if (_isAutoMode)
             {
-                RemoveAllChecks();
-
-                if (textBox1.BackColor == System.Drawing.Color.FromArgb(253, 100, 120))
+                foreach (var thread in _threadsMap)
                 {
-                    checkBox1.Checked = true;
+                    if (ThreadStatuses.GetThreadStatusTypeByStatus(thread.Value.Status) == ThreadStatusType.Failed)
+                        thread.Value.StartThread();
                 }
-
-                if (textBox2.BackColor == System.Drawing.Color.FromArgb(253, 100, 120))
-                {
-                    checkBox2.Checked = true;
-                }
-
-                if (textBox3.BackColor == System.Drawing.Color.FromArgb(253, 100, 120))
-                {
-                    checkBox3.Checked = true;
-                }
-
-                if (textBox4.BackColor == System.Drawing.Color.FromArgb(253, 100, 120))
-                {
-                    checkBox4.Checked = true;
-                }
-
-                if (textBox5.BackColor == System.Drawing.Color.FromArgb(253, 100, 120))
-                {
-                    checkBox5.Checked = true;
-                }
-
-                if (textBox6.BackColor == System.Drawing.Color.FromArgb(253, 100, 120))
-                {
-                    checkBox6.Checked = true;
-                }
-
-                if (textBox7.BackColor == System.Drawing.Color.FromArgb(253, 100, 120))
-                {
-                    checkBox7.Checked = true;
-                }
-
-                StartCopyingFiles();
             }
         }
 
@@ -152,16 +88,16 @@ namespace GetOrders
                 path_textBox.Text = sr.ReadToEnd();
                 sr.Close();
             }
-            catch (System.Exception ex)
+            catch (Exception)
             {
-                path_textBox.Text = "C:\\Заявки";
+                path_textBox.Text = @"C:\Заявки";
             }
             if (path_textBox.Text == "")
-                path_textBox.Text = "C:\\Заявки";
+                path_textBox.Text = @"C:\Заявки";
 
             radioButton1.Checked = true;
-            textBox8.Text = "*.xls";
-            textBox9.Text = "рабочий стол";
+            textBox8.Text = @"*.xls";
+            textBox9.Text = @"рабочий стол";
 
             string[] args = Environment.GetCommandLineArgs();
 
@@ -170,7 +106,7 @@ namespace GetOrders
                 string arg = args[i];
 
                 if (arg == "-schedule")
-                    isScheduleMode = true;
+                    _isScheduleMode = true;
 
                 if (arg == "-rmv")
                 {
@@ -183,6 +119,7 @@ namespace GetOrders
                     checkBox7.Checked = false;
                     checkBox8.Checked = false;
                     checkBox9.Checked = false;
+                    checkBox10.Checked = false;
                 }
 
                 if (arg == "-so")
@@ -212,6 +149,9 @@ namespace GetOrders
                 if (arg == "-pe")
                     checkBox9.Checked = true;
 
+                if (arg == "-pr")
+                    checkBox10.Checked = true;
+
                 if (arg == "-send")
                 {
                     radioButton2.Checked = true;
@@ -237,25 +177,26 @@ namespace GetOrders
 
                 if (arg == "-auto")
                 {
-                    isAutoMode = true;
+                    _isAutoMode = true;
                 }
             }
 
-            if (isScheduleMode || isAutoMode)
+            if (_isScheduleMode || _isAutoMode)
             {
                 StartCopyingFiles();
-                
-                time = new System.Timers.Timer();
-                time.Interval = 10000;
-                time.Enabled = true;
-                time.Elapsed += OnTimedEvent;
+
+                _time = new System.Timers.Timer
+                {
+                    Interval = 10000,
+                    Enabled = true
+                };
+                _time.Elapsed += OnTimedEvent;
             }
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
-            FolderBrowserDialog fbd = new FolderBrowserDialog();
-            fbd.RootFolder = Environment.SpecialFolder.DesktopDirectory;
+            FolderBrowserDialog fbd = new FolderBrowserDialog {RootFolder = Environment.SpecialFolder.DesktopDirectory};
             fbd.ShowDialog();
             path_textBox.Text = fbd.SelectedPath;
             try
@@ -264,9 +205,9 @@ namespace GetOrders
                 sw.Write(path_textBox.Text);
                 sw.Close();
             }
-            catch (System.Exception ex)
+            catch (Exception)
             {
-            	
+                // ignored
             }
         }
 
@@ -278,42 +219,55 @@ namespace GetOrders
                 if (!di.Exists)
                     di.Create();
             }
-            catch (System.Exception ex)
+            catch (Exception)
             {
-
+                // ignored
             }
+
             StartCopyingFiles();
         }
 
         void StartCopyingFiles()
         {
             if (checkBox1.Checked)
-                new FileThread(textBox1, "Союз", "10.7.21.50", path_textBox.Text, radioButton1.Checked, textBox8.Text, textBox9.Text, path_textBox.Text);
+                StartThread(textBox1, "Союз", "10.7.21.50", radioButton1.Checked, textBox8.Text, textBox9.Text,
+                    path_textBox.Text);
             if (checkBox2.Checked)
-                new FileThread(textBox2, "Игарка", "10.7.22.50", path_textBox.Text, radioButton1.Checked, textBox8.Text, textBox9.Text, path_textBox.Text);
+                StartThread(textBox2, "Игарка", "10.7.22.50", radioButton1.Checked, textBox8.Text, textBox9.Text,
+                    path_textBox.Text);
             if (checkBox3.Checked)
-                new FileThread(textBox3, "Риал", "10.7.23.50", path_textBox.Text, radioButton1.Checked, textBox8.Text, textBox9.Text, path_textBox.Text);
+                StartThread(textBox3, "Риал", "10.7.23.50", radioButton1.Checked, textBox8.Text, textBox9.Text,
+                    path_textBox.Text);
             if (checkBox4.Checked)
-                new FileThread(textBox4, "Стиль", "10.7.24.50", path_textBox.Text, radioButton1.Checked, textBox8.Text, textBox9.Text, path_textBox.Text);
+                StartThread(textBox4, "Стиль", "10.7.24.50", radioButton1.Checked, textBox8.Text, textBox9.Text,
+                    path_textBox.Text);
             if (checkBox5.Checked)
-                new FileThread(textBox5, "Зимушка", "10.7.25.50", path_textBox.Text, radioButton1.Checked, textBox8.Text, textBox9.Text, path_textBox.Text);
+                StartThread(textBox5, "Зимушка", "10.7.25.50", radioButton1.Checked, textBox8.Text, textBox9.Text,
+                    path_textBox.Text);
             if (checkBox6.Checked)
-                new FileThread(textBox6, "Ассорти", "10.7.26.50", path_textBox.Text, radioButton1.Checked, textBox8.Text, textBox9.Text, path_textBox.Text);
+                StartThread(textBox6, "Ассорти", "10.7.26.50", radioButton1.Checked, textBox8.Text, textBox9.Text,
+                    path_textBox.Text);
             if (checkBox7.Checked)
-                new FileThread(textBox7, "Кедр", "10.7.27.50", path_textBox.Text, radioButton1.Checked, textBox8.Text, textBox9.Text, path_textBox.Text);
+                StartThread(textBox7, "Кедр", "10.7.27.50", radioButton1.Checked, textBox8.Text, textBox9.Text,
+                    path_textBox.Text);
             if (checkBox8.Checked)
-                new FileThread(textBox10, "Белый орел", "10.7.28.50", path_textBox.Text, radioButton1.Checked, textBox8.Text, textBox9.Text, path_textBox.Text);
+                StartThread(textBox10, "Белый орел", "10.7.28.50", radioButton1.Checked, textBox8.Text, textBox9.Text,
+                    path_textBox.Text);
             if (checkBox9.Checked)
-                new FileThread(textBox11, "Перекресток", "10.7.30.50", path_textBox.Text, radioButton1.Checked, textBox8.Text, textBox9.Text, path_textBox.Text);
+                StartThread(textBox11, "Перекресток", "10.7.30.50", radioButton1.Checked, textBox8.Text, textBox9.Text,
+                    path_textBox.Text);
+            if (checkBox10.Checked)
+                StartThread(textBox12, "Промышленный", "10.7.29.50", radioButton1.Checked, textBox8.Text, textBox9.Text,
+                    path_textBox.Text);
         }
 
         private void radioButton1_CheckedChanged(object sender, EventArgs e)
         {
-            if (radioButton1.Checked == true)
+            if (radioButton1.Checked)
             {
                 radioButton2.Checked = false;
                 radioButton3.Checked = false;
-                button1.Text = "Скачать файлы";
+                button1.Text = @"Скачать файлы";
             }
             //else
             //{
@@ -324,11 +278,11 @@ namespace GetOrders
 
         private void radioButton2_CheckedChanged(object sender, EventArgs e)
         {
-            if (radioButton2.Checked == true)
+            if (radioButton2.Checked)
             {
                 radioButton1.Checked = false;
                 radioButton3.Checked = false;
-                button1.Text = "Отправить файлы";
+                button1.Text = @"Отправить файлы";
             }
             //else
             //{
@@ -339,19 +293,27 @@ namespace GetOrders
 
         private void button3_Click(object sender, EventArgs e)
         {
-            FolderBrowserDialog fbd = new FolderBrowserDialog();
-            fbd.RootFolder = Environment.SpecialFolder.DesktopDirectory;
+            FolderBrowserDialog fbd = new FolderBrowserDialog {RootFolder = Environment.SpecialFolder.DesktopDirectory};
             fbd.ShowDialog();
             textBox9.Text = fbd.SelectedPath;
         }
 
         private void radioButton3_CheckedChanged(object sender, EventArgs e)
         {
-            if (radioButton3.Checked == true)
+            if (radioButton3.Checked)
             {
                 radioButton1.Checked = false;
                 radioButton2.Checked = false;
-                button1.Text = "Удалить файлы";
+                button1.Text = @"Удалить файлы";
+            }
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            foreach (var thread in _threadsMap)
+            {
+                if (ThreadStatuses.GetThreadStatusTypeByStatus(thread.Value.Status) != ThreadStatusType.Failed)
+                    thread.Value.SetThreadToStop();
             }
         }
     }
